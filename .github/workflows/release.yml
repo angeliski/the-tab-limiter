@@ -1,0 +1,160 @@
+name: Build and Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.release.target_commitish }}
+      
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Remove 'v' prefix if present
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+      
+      - name: Check and update manifest.json version
+        id: version_check
+        run: |
+          # Get current version from manifest
+          CURRENT_VERSION=$(grep '"version"' manifest.json | sed 's/.*"version": "\(.*\)".*/\1/')
+          NEW_VERSION="${{ steps.get_version.outputs.VERSION }}"
+          
+          echo "Current version: $CURRENT_VERSION"
+          echo "New version: $NEW_VERSION"
+          
+          if [ "$CURRENT_VERSION" = "$NEW_VERSION" ]; then
+            echo "Version is already up to date"
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version needs to be updated"
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            
+            # Backup original manifest
+            cp manifest.json manifest.json.backup
+            
+            # Update version in manifest.json
+            sed -i 's/"version": "[^"]*"/"version": "'$NEW_VERSION'"/' manifest.json
+            
+            # Show the change
+            echo "Updated manifest.json:"
+            grep '"version"' manifest.json
+          fi
+      
+      - name: Configure Git
+        if: steps.version_check.outputs.needs_update == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+      
+      - name: Commit version update
+        if: steps.version_check.outputs.needs_update == 'true'
+        run: |
+          git add manifest.json
+          git commit -m "chore: bump version to ${{ steps.get_version.outputs.VERSION }}
+
+          Automated version bump for release ${{ github.event.release.tag_name }}
+          
+          [skip ci]"
+      
+      - name: Push changes
+        if: steps.version_check.outputs.needs_update == 'true'
+        run: |
+          git push origin HEAD:${{ github.event.release.target_commitish }}
+      
+      - name: Create extension ZIP
+        run: |
+          # Create the ZIP file excluding unnecessary files
+          zip -r tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip . \
+            -x "*.git*" \
+            -x ".github/*" \
+            -x "docs/*" \
+            -x "*.md" \
+            -x "node_modules/*" \
+            -x "*.zip" \
+            -x ".DS_Store" \
+            -x "Thumbs.db" \
+            -x "*.log" \
+            -x "*.lock" \
+            -x "package.json" \
+            -x "package-lock.json" \
+            -x "yarn.lock" \
+            -x "*.test.js" \
+            -x "*.spec.js" \
+            -x "*.config.js" \
+            -x ".env*" \
+            -x ".eslintrc*" \
+            -x ".prettierrc*" \
+            -x ".gitignore" \
+            -x ".editorconfig" \
+            -x "manifest.json.backup"
+          
+          # List the contents of the ZIP for verification
+          echo "ZIP contents:"
+          unzip -l tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip
+      
+      - name: Upload ZIP to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate SHA256 checksum
+        run: |
+          sha256sum tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip > tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256
+          cat tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256
+      
+      - name: Upload checksum to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Generate release comment
+        id: comment
+        run: |
+          if [ "${{ steps.version_check.outputs.needs_update }}" = "true" ]; then
+            echo "VERSION_MESSAGE=✅ Version updated to ${{ steps.get_version.outputs.VERSION }} and committed to repository" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION_MESSAGE=ℹ️ Version was already ${{ steps.get_version.outputs.VERSION }} (no update needed)" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Comment on Release
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.release.id }}
+          body: |
+            ## 📦 Extension Package Ready
+            
+            The extension package has been automatically built and attached to this release.
+            
+            ### Version Status:
+            ${{ steps.comment.outputs.VERSION_MESSAGE }}
+            
+            ### Files:
+            - `tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip` - Ready for Chrome Web Store submission
+            - `tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256` - SHA256 checksum for verification
+            
+            ### Next Steps:
+            1. Download the ZIP file from the release assets
+            2. Follow the [publishing guide](https://github.com/${{ github.repository }}/blob/master/docs/publish.md) to submit to Chrome Web Store
+            
+            ✅ Package verified and ready for distribution!
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
