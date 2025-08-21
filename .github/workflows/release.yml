@@ -126,35 +126,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Generate release comment
-        id: comment
+      - name: Display build summary
         run: |
+          echo "## 📦 Extension Package Build Summary"
+          echo ""
           if [ "${{ steps.version_check.outputs.needs_update }}" = "true" ]; then
-            echo "VERSION_MESSAGE=✅ Version updated to ${{ steps.get_version.outputs.VERSION }} and committed to repository" >> $GITHUB_OUTPUT
+            echo "### ✅ Version updated to ${{ steps.get_version.outputs.VERSION }}"
+            echo "The manifest.json has been updated and committed to the repository."
           else
-            echo "VERSION_MESSAGE=ℹ️ Version was already ${{ steps.get_version.outputs.VERSION }} (no update needed)" >> $GITHUB_OUTPUT
+            echo "### ℹ️ Version was already ${{ steps.get_version.outputs.VERSION }}"
+            echo "No commit was needed as the version was already correct."
           fi
-      
-      - name: Comment on Release
-        uses: peter-evans/create-or-update-comment@v3
-        with:
-          issue-number: ${{ github.event.release.id }}
-          body: |
-            ## 📦 Extension Package Ready
-            
-            The extension package has been automatically built and attached to this release.
-            
-            ### Version Status:
-            ${{ steps.comment.outputs.VERSION_MESSAGE }}
-            
-            ### Files:
-            - `tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip` - Ready for Chrome Web Store submission
-            - `tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256` - SHA256 checksum for verification
-            
-            ### Next Steps:
-            1. Download the ZIP file from the release assets
-            2. Follow the [publishing guide](https://github.com/${{ github.repository }}/blob/master/docs/publish.md) to submit to Chrome Web Store
-            
-            ✅ Package verified and ready for distribution!
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo ""
+          echo "### 📎 Files attached to release:"
+          echo "- \`tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip\` - Ready for Chrome Web Store submission"
+          echo "- \`tab-limiter-v${{ steps.get_version.outputs.VERSION }}.zip.sha256\` - SHA256 checksum for verification"
+          echo ""
+          echo "### 📋 Next Steps:"
+          echo "1. Download the ZIP file from the release assets"
+          echo "2. Follow the [publishing guide](https://github.com/${{ github.repository }}/blob/master/docs/publish.md)"
+          echo "3. Submit to Chrome Web Store"
+          echo ""
+          echo "✅ **Package verified and ready for distribution!**"

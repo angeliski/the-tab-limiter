@@ -10,12 +10,14 @@ This directory contains automated workflows for the Tab Limiter extension.
 
 **Actions:**
 - Extracts version from the release tag (e.g., `v0.3.5` → `0.3.5`)
-- Updates manifest.json with the new version
-- Commits the version change back to the repository
+- Checks if manifest.json needs updating (only commits if necessary)
+- Updates manifest.json with the new version (if needed)
+- Commits the version change back to the repository (if needed)
 - Creates a ZIP package of the extension with updated version
 - Excludes all unnecessary files (docs, git files, node_modules, etc.)
 - Generates SHA256 checksum for integrity verification
 - Attaches both files to the release
+- Displays build summary in workflow logs
 
 **How to use:**
 1. Go to the repository's "Releases" page

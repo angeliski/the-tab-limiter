@@ -57,7 +57,7 @@ This document describes the step-by-step process for publishing a new version of
    - Create the ZIP file with the correct version
    - Calculate SHA256 checksum for integrity
    - Attach both files to the release
-   - Add a comment indicating what was done
+   - Display build summary in the workflow logs
 7. Download the ZIP from release assets
 
 **Smart Version Management:**
