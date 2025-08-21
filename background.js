@@ -104,7 +104,17 @@ const displayAlert = (options, place) => new Promise((res, rej) => {
 		/{\s*(\S+)\s*}/g,
 		replacer
 	)
-	alert(renderedMessage);
+	
+	// Use Chrome notifications API instead of alert() for service workers
+	browser.notifications.create({
+		type: 'basic',
+		iconUrl: 'icons/48.png',
+		title: 'Tab Limiter',
+		message: renderedMessage,
+		priority: 2
+	});
+	
+	res(true);
 })
 
 let tabCount = -1

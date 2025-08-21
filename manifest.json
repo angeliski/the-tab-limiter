@@ -1,11 +1,11 @@
 {
 	"manifest_version": 3,
 	"name": "The Tab Limiter",
-	"version": "0.3.1",
+	"version": "0.3.2",
 	"description": "Limit the number of open tabs – in total and per window",
 
 	"author": "Rogerio Angeliski",
-	"homepage_url": "https://github.com/angeliski/tab-limiter",
+	"homepage_url": "https://github.com/angeliski/the-tab-limiter",
 	"icons": {
 		"48": "icons/48.png",
 		"128": "icons/128.png"
@@ -16,7 +16,7 @@
 			"128": "icons/128.png"
 		},
 		"default_popup": "options.html",
-		"default_title": "Tab Limiter"
+		"default_title": "The Tab Limiter"
 	},
 	"options_ui": {
 		"page": "options.html",
@@ -26,6 +26,7 @@
 		"service_worker": "background.js"
 	},
 	"permissions": [
-		"storage"
+		"storage",
+		"notifications"
 	]
 }
